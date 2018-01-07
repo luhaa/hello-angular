@@ -1,4 +1,5 @@
 import {Component, OnInit, Inject} from '@angular/core';
+import {Router, ActivatedRoute, Params} from '@angular/router';
 import {Todo} from './todo.model';
 
 @Component({
@@ -6,14 +7,21 @@ import {Todo} from './todo.model';
   styleUrls: ['./todo.component.css']
 })
 export class TodoComponent implements OnInit {
+  desc: string = '';
   todos: Todo[] = [];
-  desc = '';
 
-  constructor(@Inject('todoService') private service) {
+  constructor(@Inject('todoService') private service, private route: ActivatedRoute, private router: Router) {
   }
 
   ngOnInit() {
-    this.getTodos();
+    this.route.params.forEach((params: Params) => {
+      let filter = params['filter'];
+      this.filterTodos(filter);
+    });
+  }
+
+  onTextChanges(value) {
+    this.desc = value;
   }
 
   addTodo() {
@@ -43,14 +51,21 @@ export class TodoComponent implements OnInit {
       });
   }
 
-  getTodos(): void {
+  filterTodos(filter: string): void {
     this.service
-      .getTodos()
+      .filterTodos(filter)
       .then(todos => this.todos = [...todos]);
   }
 
-  onTextChanges(value) {
-    this.desc = value;
+  toggleAll() {
+    Promise.all(this.todos.map(todo => this.toggleTodo(todo)));
+  }
+
+  clearCompleted() {
+    const completed_todos = this.todos.filter(todo => todo.completed === true);
+    const active_todos = this.todos.filter(todo => todo.completed === false);
+    Promise.all(completed_todos.map(todo => this.service.deleteTodoById(todo.id)))
+      .then(() => this.todos = [...active_todos]);
   }
 
 }
